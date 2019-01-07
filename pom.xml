@@ -20,6 +20,7 @@
         <!-- Maven plugins -->
         <vertx-maven-plugin.version>1.0.18</vertx-maven-plugin.version>
         <maven-surefire-plugin.version>2.22.1</maven-surefire-plugin.version>
+        <docker-maven-plugin.version>0.28.0</docker-maven-plugin.version>
 
         <!-- other properties -->
         <vertx.verticle>org.prebid.video.cache.redirector.HttpServerVerticle</vertx.verticle>
@@ -59,6 +60,7 @@
         </dependency>
     </dependencies>
     <build>
+        <finalName>${project.artifactId}</finalName>
         <plugins>
             <plugin>
                 <groupId>io.reactiverse</groupId>
@@ -80,6 +82,25 @@
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven-surefire-plugin.version}</version>
+            </plugin>
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>${docker-maven-plugin.version}</version>
+                <configuration>
+                    <images>
+                        <image>
+                            <name>prebid/redirector</name>
+                            <build>
+                                <dockerFile>${project.basedir}/Dockerfile</dockerFile>
+                                <tags>
+                                    <tag>latest</tag>
+                                    <tag>${project.version}</tag>
+                                </tags>
+                            </build>
+                        </image>
+                    </images>
+                </configuration>
             </plugin>
         </plugins>
     </build>
