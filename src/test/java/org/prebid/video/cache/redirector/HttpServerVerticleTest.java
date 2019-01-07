@@ -91,4 +91,14 @@ public class HttpServerVerticleTest {
                     testContext.completeNow();
                 })));
     }
+
+    @Test
+    @DisplayName("Positive: health endpoint returns 200")
+    public void healthShouldRespondWith200(VertxTestContext testContext) {
+        webClient.get(8080, "localhost", "/health")
+                .send(testContext.succeeding(response -> testContext.verify(() -> {
+                    assertEquals(response.statusCode(), 200);
+                    testContext.completeNow();
+                })));
+    }
 }

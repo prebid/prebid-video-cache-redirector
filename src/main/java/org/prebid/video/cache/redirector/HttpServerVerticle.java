@@ -17,6 +17,8 @@ public class HttpServerVerticle extends AbstractVerticle {
     private static final String HOST_QUERY_PARAM = "host";
     private static final String UUID_QUERY_PARAM = "uuid";
 
+    private static final String HEALTH_ENDPOINT = "/health";
+
     private static final String UUID_PLACEHOLDER = "{{uuid}}";
 
     private Map<String, String> mapping;
@@ -31,6 +33,7 @@ public class HttpServerVerticle extends AbstractVerticle {
         final Router router = Router.router(vertx);
 
         router.get(REDIR_ENDPOINT).handler(this::handleRedir);
+        router.get(HEALTH_ENDPOINT).handler(this::handleHealth);
 
         vertx.createHttpServer()
                 .requestHandler(router)
@@ -69,5 +72,9 @@ public class HttpServerVerticle extends AbstractVerticle {
                 .setStatusCode(302)
                 .putHeader(HttpHeaders.LOCATION, location)
                 .end();
+    }
+
+    private void handleHealth(RoutingContext context) {
+        context.response().setStatusCode(HttpResponseStatus.OK.code()).end();
     }
 }
