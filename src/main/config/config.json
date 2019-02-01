@@ -2,6 +2,10 @@
   "http.port": 8080,
   "redirect.mapping": {
     "prebid.adnxs.com": "https://prebid.adnxs.com/pbc/v1/cache?uuid={{uuid}}",
-    "prebid-server.rubiconproject.com": "https://prebid-server.rubiconproject.com/cache?uuid={{uuid}}"
+    "prebid-server.rubiconproject.com": "https://prebid-server.rubiconproject.com/cache?uuid={{uuid}}",
+    "prebid-cache-us-east.rubiconproject.com": "https://prebid-cache-us-east.rubiconproject.com/cache?uuid={{uuid}}",
+    "prebid-cache-us-west.rubiconproject.com": "https://prebid-cache-us-west.rubiconproject.com/cache?uuid={{uuid}}",
+    "prebid-cache-apac.rubiconproject.com": "https://prebid-cache-apac.rubiconproject.com/cache?uuid={{uuid}}",
+    "prebid-cache-europe.rubiconproject.com": "https://prebid-cache-europe.rubiconproject.com/cache?uuid={{uuid}}"
   }
 }
