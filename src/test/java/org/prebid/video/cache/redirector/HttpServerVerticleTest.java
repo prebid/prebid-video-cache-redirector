@@ -47,9 +47,9 @@ public class HttpServerVerticleTest {
                 .addQueryParam("host", "prebid-server.rubiconproject.com")
                 .addQueryParam("uuid", "123")
                 .send(testContext.succeeding(response -> testContext.verify(() -> {
-                    assertEquals(response.statusCode(), 302);
-                    assertEquals(response.getHeader("Location"),
-                            "https://prebid-server.rubiconproject.com/cache?uuid=123");
+                    assertEquals(302, response.statusCode());
+                    assertEquals("https://prebid-server.rubiconproject.com/cache?uuid=123",
+                            response.getHeader("Location"));
                     testContext.completeNow();
                 })));
     }
@@ -61,8 +61,8 @@ public class HttpServerVerticleTest {
                 .addQueryParam("host", "prebid.example.com")
                 .addQueryParam("uuid", "123")
                 .send(testContext.succeeding(response -> testContext.verify(() -> {
-                    assertEquals(response.statusCode(), 404);
-                    assertEquals(response.bodyAsString(), "Unknown host");
+                    assertEquals(404, response.statusCode());
+                    assertEquals("Unknown host", response.bodyAsString());
                     testContext.completeNow();
                 })));
     }
@@ -73,9 +73,9 @@ public class HttpServerVerticleTest {
         webClient.get(8080, "localhost", "/redir")
                 .addQueryParam("host", "prebid-server.rubiconproject.com")
                 .send(testContext.succeeding(response -> testContext.verify(() -> {
-                    assertEquals(response.statusCode(), 400);
-                    assertEquals(response.bodyAsString(),
-                            "Request should contain single host and uuid query parameters");
+                    assertEquals(400, response.statusCode());
+                    assertEquals("Request should contain single host and uuid query parameters",
+                            response.bodyAsString());
                     testContext.completeNow();
                 })));
     }
@@ -86,9 +86,9 @@ public class HttpServerVerticleTest {
         webClient.get(8080, "localhost", "/redir")
                 .addQueryParam("uuid", "123")
                 .send(testContext.succeeding(response -> testContext.verify(() -> {
-                    assertEquals(response.statusCode(), 400);
-                    assertEquals(response.bodyAsString(),
-                            "Request should contain single host and uuid query parameters");
+                    assertEquals(400, response.statusCode());
+                    assertEquals("Request should contain single host and uuid query parameters",
+                            response.bodyAsString());
                     testContext.completeNow();
                 })));
     }
@@ -100,8 +100,8 @@ public class HttpServerVerticleTest {
                 .putHeader("Origin", "http://example.com")
                 .putHeader("Access-Control-Request-Method", "GET")
                 .send(testContext.succeeding(response -> testContext.verify(() -> {
-                    assertEquals(response.statusCode(), 200);
-                    assertEquals(response.getHeader("Access-Control-Allow-Origin"), "http://example.com");
+                    assertEquals(200, response.statusCode());
+                    assertEquals("http://example.com", response.getHeader("Access-Control-Allow-Origin"));
                     testContext.completeNow();
                 })));
     }
@@ -111,7 +111,7 @@ public class HttpServerVerticleTest {
     public void healthShouldRespondWith200(VertxTestContext testContext) {
         webClient.get(8080, "localhost", "/health")
                 .send(testContext.succeeding(response -> testContext.verify(() -> {
-                    assertEquals(response.statusCode(), 200);
+                    assertEquals(200, response.statusCode());
                     testContext.completeNow();
                 })));
     }
