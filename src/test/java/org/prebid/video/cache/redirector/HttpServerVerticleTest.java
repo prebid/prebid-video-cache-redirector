@@ -2,6 +2,7 @@ package org.prebid.video.cache.redirector;
 
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
@@ -88,6 +89,19 @@ public class HttpServerVerticleTest {
                     assertEquals(response.statusCode(), 400);
                     assertEquals(response.bodyAsString(),
                             "Request should contain single host and uuid query parameters");
+                    testContext.completeNow();
+                })));
+    }
+
+    @Test
+    @DisplayName("CORS: OPTIONS response should allow passed origin")
+    public void shouldRespondWithAllowedOrigin(VertxTestContext testContext) {
+        webClient.request(HttpMethod.OPTIONS, 8080, "localhost", "")
+                .putHeader("Origin", "http://example.com")
+                .putHeader("Access-Control-Request-Method", "GET")
+                .send(testContext.succeeding(response -> testContext.verify(() -> {
+                    assertEquals(response.statusCode(), 200);
+                    assertEquals(response.getHeader("Access-Control-Allow-Origin"), "http://example.com");
                     testContext.completeNow();
                 })));
     }

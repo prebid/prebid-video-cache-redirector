@@ -4,12 +4,17 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.http.HttpHeaders;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
+import io.vertx.ext.web.handler.CorsHandler;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static java.util.Collections.singletonList;
 
 public class HttpServerVerticle extends AbstractVerticle {
 
@@ -32,6 +37,7 @@ public class HttpServerVerticle extends AbstractVerticle {
 
         final Router router = Router.router(vertx);
 
+        router.route().handler(corsHandler());
         router.get(REDIR_ENDPOINT).handler(this::handleRedir);
         router.get(HEALTH_ENDPOINT).handler(this::handleHealth);
 
@@ -44,6 +50,11 @@ public class HttpServerVerticle extends AbstractVerticle {
                         future.fail(result.cause());
                     }
                 });
+    }
+
+    private static CorsHandler corsHandler() {
+        return CorsHandler.create(".*")
+                .allowedMethods(new HashSet<>(singletonList(HttpMethod.GET)));
     }
 
     private void handleRedir(RoutingContext context) {
