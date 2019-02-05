@@ -54,6 +54,7 @@ public class HttpServerVerticle extends AbstractVerticle {
 
     private static CorsHandler corsHandler() {
         return CorsHandler.create(".*")
+                .allowCredentials(true)
                 .allowedMethods(new HashSet<>(singletonList(HttpMethod.GET)));
     }
 

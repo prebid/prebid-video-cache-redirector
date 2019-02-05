@@ -102,6 +102,7 @@ public class HttpServerVerticleTest {
                 .send(testContext.succeeding(response -> testContext.verify(() -> {
                     assertEquals(200, response.statusCode());
                     assertEquals("http://example.com", response.getHeader("Access-Control-Allow-Origin"));
+                    assertEquals("true", response.getHeader("Access-Control-Allow-Credentials"));
                     testContext.completeNow();
                 })));
     }
