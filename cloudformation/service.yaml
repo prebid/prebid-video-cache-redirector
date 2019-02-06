@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: Deploy a service on AWS Fargate, hosted in a private subnet, but accessible via a public load balancer.
 Parameters:
-  StackName:
+  NetworkStackName:
     Type: String
     Default: redirector-network-prod
     Description: The name of the parent Fargate networking stack that you created. Necessary
@@ -114,7 +114,7 @@ Resources:
       ServiceName: !Ref 'ServiceName'
       Cluster:
         Fn::ImportValue:
-          !Join [':', [!Ref 'StackName', 'ClusterName']]
+          !Join [':', [!Ref 'NetworkStackName', 'ClusterName']]
       LaunchType: FARGATE
       DeploymentConfiguration:
         MaximumPercent: 200
@@ -124,19 +124,19 @@ Resources:
         AwsvpcConfiguration:
           SecurityGroups:
             - Fn::ImportValue:
-                !Join [':', [!Ref 'StackName', 'FargateContainerSG']]
+                !Join [':', [!Ref 'NetworkStackName', 'FargateContainerSG']]
           Subnets:
             - Fn::ImportValue:
-                !Join [':', [!Ref 'StackName', 'PrivateSubnetOne']]
+                !Join [':', [!Ref 'NetworkStackName', 'PrivateSubnetOne']]
             - Fn::ImportValue:
-                !Join [':', [!Ref 'StackName', 'PrivateSubnetTwo']]
+                !Join [':', [!Ref 'NetworkStackName', 'PrivateSubnetTwo']]
       TaskDefinition: !Ref 'TaskDefinition'
       LoadBalancers:
         - ContainerName: !Ref 'ContainerName'
           ContainerPort: !Ref 'ContainerPort'
           TargetGroupArn:
             Fn::ImportValue:
-              !Join [':', [!Ref 'StackName', 'TargetGroup']]
+              !Join [':', [!Ref 'NetworkStackName', 'TargetGroup']]
 
   # Auto-scaling
   ScalableTarget:
@@ -148,7 +148,7 @@ Resources:
         - /
         - - service
           - Fn::ImportValue:
-              !Join [':', [!Ref 'StackName', 'ClusterName']]
+              !Join [':', [!Ref 'NetworkStackName', 'ClusterName']]
           - !GetAtt Service.Name
       RoleARN: !Join ['', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/', !Ref 'EcsAutoscaleRole']]
       ScalableDimension: ecs:service:DesiredCount
