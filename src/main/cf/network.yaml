@@ -29,6 +29,7 @@ Mappings:
       NATGWName: 'redirector-nat-gateway-az2'
 
 Resources:
+  # VPC
   VPC:
     Type: AWS::EC2::VPC
     Properties:
@@ -39,6 +40,7 @@ Resources:
         - Key: 'Name'
           Value: !FindInMap ['Subnets', 'VPC', 'Name']
 
+  # Private subnets
   PrivateSubnetOne:
     Type: AWS::EC2::Subnet
     Properties:
@@ -63,6 +65,8 @@ Resources:
       Tags:
         - Key: 'Name'
           Value: !FindInMap ['Subnets', 'PrivateTwo', 'Name']
+
+  # Public subnets
   PublicSubnetOne:
     Type: AWS::EC2::Subnet
     Properties:
@@ -270,6 +274,7 @@ Resources:
       IpProtocol: -1
       SourceSecurityGroupId: !Ref ALBSG
 
+  # ECS cluster
   ECSCluster:
     Type: AWS::ECS::Cluster
     Properties:

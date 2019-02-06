@@ -30,23 +30,58 @@ Parameters:
   ContainerCpu:
     Type: Number
     Default: 256
+    AllowedValues:
+      - 256
+      - 512
+      - 1024
+      - 2048
+      - 4096
     Description: How much CPU to give the container. 1024 is 1 CPU
   ContainerMemory:
     Type: Number
     Default: 512
+    AllowedValues:
+      - 512
+      - 1024
+      - 2048
+      - 3072
+      - 4096
+      - 5120
+      - 6144
+      - 7168
+      - 8192
+      - 16384
     Description: How much memory in megabytes to give the container
   DesiredCount:
     Type: Number
     Default: 2
     Description: How many copies of the service task to run
+  MaxCount:
+    Type: Number
+    Default: 4
+    Description: Maximum copies of the service task to run
   TaskExecutionRole:
     Type: String
     Default: ecsTaskExecutionRole
     Description: An IAM role to give the tasks for pulling and container images and publishing container logs to Amazon
       CloudWatch
+  EcsAutoscaleRole:
+    Type: String
+    Default: ecsAutoscaleRole
+    Description: An IAM role that authorizes Amazon ECS to use Service Auto Scaling
+  ScalingPolicyName:
+    Type: String
+    Default: redirector-scale-policy
+    Description: A name of the scaling policy
 
 Resources:
   # Task definition.
+  TaskCloudWatchLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Join ['', ['/ecs/', !Ref 'TaskName']]
+      RetentionInDays: 365
+
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
@@ -59,19 +94,18 @@ Resources:
       ExecutionRoleArn: !Join ['', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/', !Ref 'TaskExecutionRole']]
       ContainerDefinitions:
         - Name: !Ref 'ContainerName'
+          Essential: true
           Cpu: !Ref 'ContainerCpu'
           Memory: !Ref 'ContainerMemory'
           Image: !Ref 'ImageUrl'
           PortMappings:
             - ContainerPort: !Ref 'ContainerPort'
-#          LogConfiguration:
-#            LogDriver: awslogs
-#            Options:
-#              awslogs-group: !Join ['', ['/ecs/', !Ref 'TaskName']]
-#              awslogs-region: !Ref 'AWS::Region'
-#              awslogs-stream-prefix: 'ecs'
-
-  # autoscaling
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref 'TaskCloudWatchLogGroup'
+              awslogs-region: !Ref 'AWS::Region'
+              awslogs-stream-prefix: 'ecs'
 
   # Service
   Service:
@@ -103,3 +137,33 @@ Resources:
           TargetGroupArn:
             Fn::ImportValue:
               !Join [':', [!Ref 'StackName', 'TargetGroup']]
+
+  # Auto-scaling
+  ScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: !Ref MaxCount
+      MinCapacity: !Ref DesiredCount
+      ResourceId: !Join
+        - /
+        - - service
+          - Fn::ImportValue:
+              !Join [':', [!Ref 'StackName', 'ClusterName']]
+          - !GetAtt Service.Name
+      RoleARN: !Join ['', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/', !Ref 'EcsAutoscaleRole']]
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  ScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: !Ref 'ScalingPolicyName'
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        DisableScaleIn: false
+        TargetValue: 80
+        ScaleInCooldown: 300
+        ScaleOutCooldown: 300
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization
