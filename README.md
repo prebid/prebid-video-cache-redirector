@@ -1,5 +1,34 @@
 # Prebid Video Cache Redirector
 
+## General overview
+Purpose of this application - allow to overcome the limitation (or rather a security feature) of [Google Ad Manager](https://admanager.google.com/home/) 
+prohibiting publishers to have macros in the host name part of a VAST tag URL.
+
+With this service running, for example at `cache.prebid.org`, the publisher would be able to enter a constant VAST tag 
+URL like `https://cache.prebid.org/redir?host=%%PATTERN:hb_cachehost%%&uuid=%%PATTERN:hb_uuid%%`. The service will 
+redirect the video player to the appropriate place, e.g. `prebid.adnxs.com/pbc/v1/cache` or 
+`prebid-server.rubiconproject.com/cache`.
+
+In order to prevent misuse of this service it validates requested redirect host key against configured list of allowed 
+redirect locations (see [configuration](#configuration) section).
+
+## Endpoints description
+The application provides following endpoints:
+
+##### GET /redir
+* Responds with `302` code and `Location` header with the URL of corresponding redirect location
+* Responds with `404` code if host specified in `host` query parameter is not configured in the application
+* Responds with `400` if `host` and/or `uuid` query parameters are missing in request
+
+Example: In response to `GET /redir?host=prebid-server.rubiconproject.com&uuid=123` request following response is returned:
+```
+HTTP/1.1 302 Found
+location: https://prebid-server.rubiconproject.com/cache?uuid=123
+```
+
+##### GET /health
+Always responds with `200` code. This is to support application health monitoring by load-balancer.
+
 ## Build instructions
 To build the project, you will need at least
 [Java 8 JDK](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
