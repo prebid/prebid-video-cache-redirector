@@ -144,13 +144,13 @@ uploaded in it beforehand.
 ![S3Bucket](img/S3.png)
 
 All the resources are broken into two groups. [First group](cloudformation/network.yaml) contains all the network 
-resources (VPC, Subnets, ALB) and ECS Cluster. [Second group](cloudformation/service.yaml) contains ECS Task Definition 
-and Service.
+resources (VPC, Subnets) and ECS Cluster. [Second group](cloudformation/service.yaml) contains ECS Task Definition, 
+Service and ALB.
 
 At first create the network stack:
 - Initiate CloudFormation stack creation
 ![CFInitiate](img/CF1.png)
-- Pick a decent name for the stack, for example `redirector-network-prod`
+- Pick a decent name for the stack, for example `prebid-network-prod`
 ![CFStackName](img/CF2.png)
 - Wait until all the resources are provisioned
 
@@ -166,7 +166,7 @@ After that create the service stack:
 - Wait until all the resources are provisioned
 
 Once both stacks are created application should be up and running, it could be accessed by ALB DNS name that is found on 
-the Outputs tab of the network stack as `ExternalUrl`:
+the Outputs tab of the service stack as `ExternalUrl`:
 ![CFOutputs](img/CF4.png)
 ```
 curl -v "http://<alb_name>.<aws_region>.elb.amazonaws.com/redir?host=prebid-server.rubiconproject.com&uuid=123"

@@ -1,32 +1,30 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: This stack creates a VPC constisting of two private and two public subnets, Internet Gateway,  NAT Gateway and publicly accessible Application Load Balancer
+Description: This stack creates a VPC constisting of two private and two public subnets, Internet Gateway, NAT Gateway
 
 Mappings:
   Subnets:
     VPC:
-      Name: 'redirector-vpc'
+      Name: 'prebid-vpc'
       CIDR: '172.54.0.0/16'
-      InternetGWName: 'redirector-igw'
-      RouteTableName: 'redirector-pubic-routing-table'
-      ALBName: 'redirector-alb'
-      TargetGroupName: 'redirector-target-group'
-      ECSClusterName: 'redirector-ecs-cluster'
+      InternetGWName: 'prebid-igw'
+      RouteTableName: 'prebid-pubic-routing-table'
+      ECSClusterName: 'prebid-ecs-cluster'
     PrivateOne:
-      Name: 'redirector-private-subnet-az1'
+      Name: 'prebid-private-subnet-az1'
       CIDR: '172.54.0.0/20'
-      RouteTableName: 'redirector-private-routing-table-az1'
+      RouteTableName: 'prebid-private-routing-table-az1'
     PrivateTwo:
-      Name: 'redirector-private-subnet-az2'
+      Name: 'prebid-private-subnet-az2'
       CIDR: '172.54.16.0/20'
-      RouteTableName: 'redirector-private-routing-table-az2'
+      RouteTableName: 'prebid-private-routing-table-az2'
     PublicOne:
-      Name: 'redirector-public-subnet-az1'
+      Name: 'prebid-public-subnet-az1'
       CIDR: '172.54.32.0/20'
-      NATGWName: 'redirector-nat-gateway-az1'
+      NATGWName: 'prebid-nat-gateway-az1'
     PublicTwo:
-      Name: 'redirector-public-subnet-az2'
+      Name: 'prebid-public-subnet-az2'
       CIDR: '172.54.48.0/20'
-      NATGWName: 'redirector-nat-gateway-az2'
+      NATGWName: 'prebid-nat-gateway-az2'
 
 Resources:
   # VPC
@@ -199,81 +197,6 @@ Resources:
       RouteTableId: !Ref PrivateRouteTableTwo
       SubnetId: !Ref PrivateSubnetTwo
 
-  # Load Balancer
-  ALBSG:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Access to the public facing load balancer
-      VpcId: !Ref VPC
-      SecurityGroupIngress:
-        - CidrIp: 0.0.0.0/0
-          IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-  ALB:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      Scheme: internet-facing
-      LoadBalancerAttributes:
-        - Key: idle_timeout.timeout_seconds
-          Value: '60'
-      Subnets:
-        - !Ref PublicSubnetOne
-        - !Ref PublicSubnetTwo
-      SecurityGroups: [!Ref 'ALBSG']
-      Tags:
-        - Key: 'Name'
-          Value: !FindInMap ['Subnets', 'VPC', 'ALBName']
-  TargetGroup:
-    Type: AWS::ElasticLoadBalancingV2::TargetGroup
-    Properties:
-      HealthCheckPath: /health
-      HealthCheckProtocol: HTTP
-      Name: !FindInMap ['Subnets', 'VPC', 'TargetGroupName']
-      Port: 80
-      Protocol: HTTP
-      TargetType: ip
-      VpcId: !Ref VPC
-  ALBListener:
-    Type: AWS::ElasticLoadBalancingV2::Listener
-    DependsOn:
-      - ALB
-    Properties:
-      DefaultActions:
-        - Type: 'fixed-response'
-          FixedResponseConfig:
-            ContentType: text/plain
-            StatusCode: 404
-      LoadBalancerArn: !Ref ALB
-      Port: 80
-      Protocol: HTTP
-  ListenerRule:
-    Type: AWS::ElasticLoadBalancingV2::ListenerRule
-    Properties:
-      Actions:
-        - Type: forward
-          TargetGroupArn: !Ref TargetGroup
-      Conditions:
-        - Field: path-pattern
-          Values:
-            - '/redir'
-      ListenerArn: !Ref ALBListener
-      Priority: 1
-
-  # Security Group for Fargate Tasks
-  FargateContainerSG:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Access to the Fargate containers
-      VpcId: !Ref VPC
-  FargateContainerSGIngressFromALB:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      Description: Ingress from the ALB
-      GroupId: !Ref FargateContainerSG
-      IpProtocol: -1
-      SourceSecurityGroupId: !Ref ALBSG
-
   # ECS cluster
   ECSCluster:
     Type: AWS::ECS::Cluster
@@ -286,11 +209,6 @@ Outputs:
     Value: !Ref ECSCluster
     Export:
       Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ClusterName' ] ]
-  ExternalUrl:
-    Description: The url of the load balancer
-    Value: !Join ['', ['http://', !GetAtt 'ALB.DNSName']]
-    Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'ExternalUrl' ] ]
   VPCId:
     Description: The ID of the VPC that this stack is deployed in
     Value: !Ref VPC
@@ -316,13 +234,3 @@ Outputs:
     Value: !Ref PrivateSubnetTwo
     Export:
       Name: !Join [ ':', [ !Ref 'AWS::StackName', 'PrivateSubnetTwo' ] ]
-  FargateContainerSG:
-    Description: A security group used to allow Fargate containers to receive traffic
-    Value: !Ref FargateContainerSG
-    Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'FargateContainerSG' ] ]
-  TargetGroup:
-    Description: A target group pre-configured for future Fargate service
-    Value: !Ref TargetGroup
-    Export:
-      Name: !Join [ ':', [ !Ref 'AWS::StackName', 'TargetGroup' ] ]
