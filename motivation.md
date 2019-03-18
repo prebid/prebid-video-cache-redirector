@@ -38,9 +38,13 @@ Here are the scenarios this proposal aims to address.
 
 The following diagram shows a scenario where BidderA doesn’t have its own caching service, so Prebid.js caches the VAST XML in BidderC’s caching service. Because there are two caching services being used, the ad server requires at least two separate video creatives -- one that points at BidderB’s caching service and the other at BidderC’s caching service.
 
+![Before](video_cache_redirector_before.png)
+
 # Solution
 
 The solution we chose is for Prebid.org to host a ‘cache redirector’ service. The video creative would point to this service, which then redirects the player to where the cached asset actually resides. Continuing the example from above:
+
+![After](video_cache_redirector_after.png)
 
 The publisher would be able to enter a constant VAST tag URL like:
 
