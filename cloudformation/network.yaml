@@ -4,27 +4,15 @@ Description: This stack creates a VPC constisting of two private and two public 
 Mappings:
   Subnets:
     VPC:
-      Name: 'prebid-vpc'
       CIDR: '172.54.0.0/16'
-      InternetGWName: 'prebid-igw'
-      RouteTableName: 'prebid-pubic-routing-table'
-      ECSClusterName: 'prebid-ecs-cluster'
     PrivateOne:
-      Name: 'prebid-private-subnet-az1'
       CIDR: '172.54.0.0/20'
-      RouteTableName: 'prebid-private-routing-table-az1'
     PrivateTwo:
-      Name: 'prebid-private-subnet-az2'
       CIDR: '172.54.16.0/20'
-      RouteTableName: 'prebid-private-routing-table-az2'
     PublicOne:
-      Name: 'prebid-public-subnet-az1'
       CIDR: '172.54.32.0/20'
-      NATGWName: 'prebid-nat-gateway-az1'
     PublicTwo:
-      Name: 'prebid-public-subnet-az2'
       CIDR: '172.54.48.0/20'
-      NATGWName: 'prebid-nat-gateway-az2'
 
 Resources:
   # VPC
@@ -36,7 +24,7 @@ Resources:
       CidrBlock: !FindInMap ['Subnets', 'VPC', 'CIDR']
       Tags:
         - Key: 'Name'
-          Value: !FindInMap ['Subnets', 'VPC', 'Name']
+          Value: !Join ['-', [!Ref 'AWS::StackName', 'vpc']]
 
   # Private subnets
   PrivateSubnetOne:
@@ -50,7 +38,7 @@ Resources:
       CidrBlock: !FindInMap ['Subnets', 'PrivateOne', 'CIDR']
       Tags:
         - Key: 'Name'
-          Value: !FindInMap ['Subnets', 'PrivateOne', 'Name']
+          Value: !Join ['-', [!Ref 'AWS::StackName', 'private-subnet-az1']]
   PrivateSubnetTwo:
     Type: AWS::EC2::Subnet
     Properties:
@@ -62,7 +50,7 @@ Resources:
       CidrBlock: !FindInMap ['Subnets', 'PrivateTwo', 'CIDR']
       Tags:
         - Key: 'Name'
-          Value: !FindInMap ['Subnets', 'PrivateTwo', 'Name']
+          Value: !Join ['-', [!Ref 'AWS::StackName', 'private-subnet-az2']]
 
   # Public subnets
   PublicSubnetOne:
@@ -77,7 +65,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: 'Name'
-          Value: !FindInMap ['Subnets', 'PublicOne', 'Name']
+          Value: !Join ['-', [!Ref 'AWS::StackName', 'public-subnet-az1']]
   PublicSubnetTwo:
     Type: AWS::EC2::Subnet
     Properties:
@@ -90,7 +78,7 @@ Resources:
       MapPublicIpOnLaunch: true
       Tags:
         - Key: 'Name'
-          Value: !FindInMap ['Subnets', 'PublicTwo', 'Name']
+          Value: !Join ['-', [!Ref 'AWS::StackName', 'public-subnet-az2']]
 
   # Internet Gateway for public subnets
   InternetGateway:
@@ -98,12 +86,12 @@ Resources:
     Properties:
       Tags:
         - Key: 'Name'
-          Value: !FindInMap ['Subnets', 'VPC', 'InternetGWName']
+          Value: !Join ['-', [!Ref 'AWS::StackName', 'igw']]
   InternetGatewayAttachement:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       VpcId: !Ref VPC
-      InternetGatewayId: !Ref 'InternetGateway'
+      InternetGatewayId: !Ref InternetGateway
 
   # Route table for public subnets
   PublicRouteTable:
@@ -112,14 +100,14 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: 'Name'
-          Value: !FindInMap ['Subnets', 'VPC', 'RouteTableName']
+          Value: !Join ['-', [!Ref 'AWS::StackName', 'public-routing-table']]
   PublicRoute:
     Type: AWS::EC2::Route
     DependsOn: InternetGatewayAttachement
     Properties:
-      RouteTableId: !Ref 'PublicRouteTable'
+      RouteTableId: !Ref PublicRouteTable
       DestinationCidrBlock: '0.0.0.0/0'
-      GatewayId: !Ref 'InternetGateway'
+      GatewayId: !Ref InternetGateway
   PublicSubnetOneRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -139,7 +127,7 @@ Resources:
       SubnetId: !Ref PublicSubnetOne
       Tags:
         - Key: 'Name'
-          Value: !FindInMap ['Subnets', 'PublicOne', 'NATGWName']
+          Value: !Join ['-', [!Ref 'AWS::StackName', 'nat-gw-az1']]
   NATGatewayTwo:
     Type: AWS::EC2::NatGateway
     Properties:
@@ -147,7 +135,7 @@ Resources:
       SubnetId: !Ref PublicSubnetTwo
       Tags:
         - Key: 'Name'
-          Value: !FindInMap ['Subnets', 'PublicTwo', 'NATGWName']
+          Value: !Join ['-', [!Ref 'AWS::StackName', 'nat-gw-az2']]
   EIPNATOne:
     Type: AWS::EC2::EIP
     DependsOn: InternetGatewayAttachement
@@ -166,7 +154,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: 'Name'
-          Value: !FindInMap ['Subnets', 'PrivateOne', 'RouteTableName']
+          Value: !Join ['-', [!Ref 'AWS::StackName', 'private-routing-table-az1']]
   PrivateRouteOne:
     Type: AWS::EC2::Route
     Properties:
@@ -184,7 +172,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: 'Name'
-          Value: !FindInMap ['Subnets', 'PrivateTwo', 'RouteTableName']
+          Value: !Join ['-', [!Ref 'AWS::StackName', 'private-routing-table-az2']]
   PrivateRouteTwo:
     Type: AWS::EC2::Route
     Properties:
@@ -201,7 +189,7 @@ Resources:
   ECSCluster:
     Type: AWS::ECS::Cluster
     Properties:
-      ClusterName: !FindInMap ['Subnets', 'VPC', 'ECSClusterName']
+      ClusterName: !Join ['-', [!Ref 'AWS::StackName', 'ecs-cluster']]
 
 Outputs:
   ClusterName:

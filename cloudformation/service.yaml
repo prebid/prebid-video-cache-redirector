@@ -6,18 +6,6 @@ Parameters:
     Default: prebid-network-prod
     Description: The name of the parent Fargate networking stack that you created. Necessary
       to locate and reference resources created by that stack.
-  TaskName:
-    Type: String
-    Default: redirector-task-def
-    Description: A name for the task definition
-  ContainerName:
-    Type: String
-    Default: redirector-container
-    Description: A name for the container
-  ServiceName:
-    Type: String
-    Default: redirector-service
-    Description: A name for the service
   ImageUrl:
     Type: String
     Default: prebid/redirector:latest
@@ -69,16 +57,6 @@ Parameters:
     Type: String
     Default: ecsAutoscaleRole
     Description: An IAM role that authorizes Amazon ECS to use Service Auto Scaling
-  ScalingPolicyName:
-    Type: String
-    Default: redirector-scale-policy
-    Description: A name of the scaling policy
-
-Mappings:
-  Subnets:
-    VPC:
-      ALBName: 'redirector-alb'
-      TargetGroupName: 'redirector-target-group'
 
 Resources:
   # Load Balancer
@@ -88,7 +66,7 @@ Resources:
       GroupDescription: Access to the public facing load balancer
       VpcId:
         Fn::ImportValue:
-          !Join [':', [!Ref 'NetworkStackName', 'VPCId']]
+          !Join [':', [!Ref NetworkStackName, 'VPCId']]
       SecurityGroupIngress:
         - CidrIp: 0.0.0.0/0
           IpProtocol: tcp
@@ -103,25 +81,25 @@ Resources:
           Value: '60'
       Subnets:
         - Fn::ImportValue:
-            !Join [':', [!Ref 'NetworkStackName', 'PublicSubnetOne']]
+            !Join [':', [!Ref NetworkStackName, 'PublicSubnetOne']]
         - Fn::ImportValue:
-            !Join [':', [!Ref 'NetworkStackName', 'PublicSubnetTwo']]
-      SecurityGroups: [!Ref 'ALBSG']
+            !Join [':', [!Ref NetworkStackName, 'PublicSubnetTwo']]
+      SecurityGroups: [!Ref ALBSG]
       Tags:
         - Key: 'Name'
-          Value: !FindInMap ['Subnets', 'VPC', 'ALBName']
+          Value: !Join ['-', [!Ref 'AWS::StackName', 'alb']]
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       HealthCheckPath: /health
       HealthCheckProtocol: HTTP
-      Name: !FindInMap ['Subnets', 'VPC', 'TargetGroupName']
+      Name: !Join ['-', [!Ref 'AWS::StackName', 'tg ']]
       Port: 80
       Protocol: HTTP
       TargetType: ip
       VpcId:
         Fn::ImportValue:
-          !Join [':', [!Ref 'NetworkStackName', 'VPCId']]
+          !Join [':', [!Ref NetworkStackName, 'VPCId']]
   ALBListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     DependsOn:
@@ -155,7 +133,7 @@ Resources:
       GroupDescription: Access to the Fargate containers
       VpcId:
         Fn::ImportValue:
-          !Join [':', [!Ref 'NetworkStackName', 'VPCId']]
+          !Join [':', [!Ref NetworkStackName, 'VPCId']]
   FargateContainerSGIngressFromALB:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
@@ -168,31 +146,31 @@ Resources:
   TaskCloudWatchLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      LogGroupName: !Join ['', ['/ecs/', !Ref 'TaskName']]
+      LogGroupName: !Join ['', ['/ecs/', !Join ['-', [!Ref 'AWS::StackName', 'task-def']]]]
       RetentionInDays: 365
 
   TaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: !Ref 'TaskName'
-      Cpu: !Ref 'ContainerCpu'
-      Memory: !Ref 'ContainerMemory'
+      Family: !Join ['-', [!Ref 'AWS::StackName', 'task-def']]
+      Cpu: !Ref ContainerCpu
+      Memory: !Ref ContainerMemory
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
-      ExecutionRoleArn: !Join ['', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/', !Ref 'TaskExecutionRole']]
+      ExecutionRoleArn: !Join ['', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/', !Ref TaskExecutionRole]]
       ContainerDefinitions:
-        - Name: !Ref 'ContainerName'
+        - Name: !Join ['-', [!Ref 'AWS::StackName', 'container']]
           Essential: true
-          Cpu: !Ref 'ContainerCpu'
-          Memory: !Ref 'ContainerMemory'
-          Image: !Ref 'ImageUrl'
+          Cpu: !Ref ContainerCpu
+          Memory: !Ref ContainerMemory
+          Image: !Ref ImageUrl
           PortMappings:
-            - ContainerPort: !Ref 'ContainerPort'
+            - ContainerPort: !Ref ContainerPort
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Ref 'TaskCloudWatchLogGroup'
+              awslogs-group: !Ref TaskCloudWatchLogGroup
               awslogs-region: !Ref 'AWS::Region'
               awslogs-stream-prefix: 'ecs'
 
@@ -202,28 +180,28 @@ Resources:
     DependsOn:
       - ListenerRule
     Properties:
-      ServiceName: !Ref 'ServiceName'
+      ServiceName: !Join ['-', [!Ref 'AWS::StackName', 'service']]
       Cluster:
         Fn::ImportValue:
-          !Join [':', [!Ref 'NetworkStackName', 'ClusterName']]
+          !Join [':', [!Ref NetworkStackName, 'ClusterName']]
       LaunchType: FARGATE
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 100
-      DesiredCount: !Ref 'DesiredCount'
+      DesiredCount: !Ref DesiredCount
       NetworkConfiguration:
         AwsvpcConfiguration:
           SecurityGroups:
             - !Ref FargateContainerSG
           Subnets:
             - Fn::ImportValue:
-                !Join [':', [!Ref 'NetworkStackName', 'PrivateSubnetOne']]
+                !Join [':', [!Ref NetworkStackName, 'PrivateSubnetOne']]
             - Fn::ImportValue:
-                !Join [':', [!Ref 'NetworkStackName', 'PrivateSubnetTwo']]
-      TaskDefinition: !Ref 'TaskDefinition'
+                !Join [':', [!Ref NetworkStackName, 'PrivateSubnetTwo']]
+      TaskDefinition: !Ref TaskDefinition
       LoadBalancers:
-        - ContainerName: !Ref 'ContainerName'
-          ContainerPort: !Ref 'ContainerPort'
+        - ContainerName: !Join ['-', [!Ref 'AWS::StackName', 'container']]
+          ContainerPort: !Ref ContainerPort
           TargetGroupArn: !Ref TargetGroup
 
   # Auto-scaling
@@ -236,16 +214,16 @@ Resources:
         - /
         - - service
           - Fn::ImportValue:
-              !Join [':', [!Ref 'NetworkStackName', 'ClusterName']]
+              !Join [':', [!Ref NetworkStackName, 'ClusterName']]
           - !GetAtt Service.Name
-      RoleARN: !Join ['', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/', !Ref 'EcsAutoscaleRole']]
+      RoleARN: !Join ['', [ !Sub 'arn:aws:iam::${AWS::AccountId}:role/', !Ref EcsAutoscaleRole]]
       ScalableDimension: ecs:service:DesiredCount
       ServiceNamespace: ecs
 
   ScalingPolicy:
     Type: AWS::ApplicationAutoScaling::ScalingPolicy
     Properties:
-      PolicyName: !Ref 'ScalingPolicyName'
+      PolicyName: !Join ['-', [!Ref 'AWS::StackName', 'scaling-policy']]
       PolicyType: TargetTrackingScaling
       ScalingTargetId: !Ref ScalableTarget
       TargetTrackingScalingPolicyConfiguration:
