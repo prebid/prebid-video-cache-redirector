@@ -99,7 +99,7 @@ Resources:
     Properties:
       HealthCheckPath: /health
       HealthCheckProtocol: HTTP
-      Name: !Join ['-', [!Ref 'AWS::StackName', 'tg ']]
+      Name: !Join ['-', [!Ref 'AWS::StackName', 'tg']]
       Port: 80
       Protocol: HTTP
       TargetType: ip
@@ -110,6 +110,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::Listener
     DependsOn:
       - ALB
+      - TargetGroup
     Properties:
       DefaultActions:
         - Type: 'fixed-response'
