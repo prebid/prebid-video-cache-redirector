@@ -57,6 +57,14 @@ Parameters:
     Type: String
     Default: ecsAutoscaleRole
     Description: An IAM role that authorizes Amazon ECS to use Service Auto Scaling
+  LoadBalancerCertificateId:
+    Type: String
+    Default: ''
+    Description: Id of the pre-uploaded (or pre-requested) SSL certificate from ACM (Amazon Certificate Manager).
+      That is, it is a last part of the Certificate ARN, for example "arn:aws:acm:us-east-1:123456789123:certificate/>this_is_the_id<"
+
+Conditions:
+  HasLoadBalancerCertificateId: !Not [!Equals [!Ref LoadBalancerCertificateId, '']]
 
 Resources:
   # Load Balancer
@@ -72,6 +80,10 @@ Resources:
           IpProtocol: tcp
           FromPort: 80
           ToPort: 80
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
   ALB:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
@@ -100,7 +112,7 @@ Resources:
       VpcId:
         Fn::ImportValue:
           !Join [':', [!Ref NetworkStackName, 'VPCId']]
-  ALBListener:
+  HttpListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     DependsOn:
       - ALB
@@ -114,7 +126,7 @@ Resources:
       LoadBalancerArn: !Ref ALB
       Port: 80
       Protocol: HTTP
-  ListenerRule:
+  HttpListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
@@ -124,7 +136,37 @@ Resources:
         - Field: path-pattern
           Values:
             - '/redir'
-      ListenerArn: !Ref ALBListener
+      ListenerArn: !Ref HttpListener
+      Priority: 1
+  HttpsListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Condition: HasLoadBalancerCertificateId
+    DependsOn:
+      - ALB
+      - TargetGroup
+    Properties:
+      DefaultActions:
+        - Type: 'fixed-response'
+          FixedResponseConfig:
+            ContentType: text/plain
+            StatusCode: 404
+      LoadBalancerArn: !Ref ALB
+      Port: 443
+      Protocol: HTTPS
+      Certificates:
+        - CertificateArn: !Join ['', [ !Sub 'arn:aws:iam::${AWS::AccountId}:server-certificate/', !Ref LoadBalancerCertificateName]]
+  HttpsListenerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Condition: HasLoadBalancerCertificateId
+    Properties:
+      Actions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - '/redir'
+      ListenerArn: !Ref HttpsListener
       Priority: 1
 
   # Security Group for Fargate Tasks
@@ -179,7 +221,7 @@ Resources:
   Service:
     Type: AWS::ECS::Service
     DependsOn:
-      - ListenerRule
+      - HttpListenerRule
     Properties:
       ServiceName: !Join ['-', [!Ref 'AWS::StackName', 'service']]
       Cluster:
